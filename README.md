@@ -27,12 +27,12 @@ npx vitest
 
 ```
 ├── .env                            # Env variables(file is not available initially, create one if needed.)
-├── src/globals.css                 # Global CSS of course
-├── src/constants.ts                # Global constants at one place
-├── src/page.tsx                    # The main code...
-├── src/layout.tsx                  # Layout file(applied font styles)
-├── src/onboarding.schema.ts        # Zod schema definition
-└── src/onboarding.schema.test.ts   # Vitest test suite
+├── src/app/globals.css                 # Global CSS of course
+├── src/app/constants.ts                # Global constants at one place
+├── src/app/page.tsx                    # The main code...
+├── src/app/layout.tsx                  # Layout file(applied font styles)
+├── src/app/onboarding.schema.ts        # Zod schema definition
+└── src/app/onboarding.schema.test.ts   # Vitest test suite
 ```
 
 ### How RHF + Zod Wired
