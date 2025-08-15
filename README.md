@@ -35,6 +35,18 @@ npx vitest
 └── src/onboarding.schema.test.ts   # Vitest test suite
 ```
 
+### How RHF + Zod Wired
+
+- Zod Schema and SchemaType is defined in `onboarding.schema.ts`.
+- Imported those to `page.tsx` where code for form is located.
+- Used `useForm()` hook with resolver parameter.
+- `zodResolver` from `@hookform/resolvers` is used to bind a valid resolver to useForm hook
+- Each field is registered with `register()` function.
+
+### Env Var
+
+`NEXT_PUBLIC_ONBOARD_URL`
+
 ### 😁 Thanks for the oppurtunity.
 
 2025/08/16 12.06 PM
