@@ -1,103 +1,325 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSearchParams } from "next/navigation";
+import { FC, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { twMerge } from "tailwind-merge";
+import { Constants } from "./constants";
+import { OnboardingFormData, onboardingSchema } from "./onboarding.schema";
+
+const Alert: FC<{ close: () => void; message: string; isError?: boolean }> = ({
+  close,
+  message,
+  isError,
+}) => {
+  useEffect(() => {
+    const timeout = setTimeout(close, Constants.AlertDuration);
+    return () => clearTimeout(timeout);
+  }, [close]);
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+    <div
+      className={twMerge(
+        "flex items-start rounded-xl p-4 fixed top-6 right-5 max-w-[calc(100vw-32px)] sm:max-w-md shadow",
+        isError ? "bg-red-600 text-red-50" : "bg-emerald-600 text-emerald-50"
+      )}
+    >
+      <p className="flex-1 mr-5">{message}</p>
+      <button onClick={close} className="cursor-pointer">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="size-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </svg>
+      </button>
     </div>
   );
-}
+};
+
+const HomePage = () => {
+  const [response, setResponse] = useState<{
+    message: string;
+    isError?: boolean;
+  } | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset: resetForm,
+    setValue,
+  } = useForm({
+    resolver: zodResolver(onboardingSchema),
+    defaultValues: {
+      services: [],
+      acceptTerms: false,
+    },
+  });
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const serviceParams = searchParams
+      .getAll("service")
+      .filter((s) => Constants.ServicesList.includes(s));
+    if (serviceParams.length > 0) {
+      setValue("services", serviceParams);
+    }
+
+    const prefillMap = {
+      fullName: searchParams.get("fullName"),
+      email: searchParams.get("email"),
+      companyName: searchParams.get("companyName"),
+      budgetUsd: searchParams.get("budgetUsd"),
+      projectStartDate: searchParams.get("projectStartDate"),
+    };
+
+    Object.entries(prefillMap).forEach(([key, value]) => {
+      if (value)
+        setValue(key as any, key === "budgetUsd" ? Number(value) : value);
+    });
+  }, [searchParams, setValue]);
+
+  const onSubmit = async (data: OnboardingFormData) => {
+    setResponse(null);
+
+    try {
+      const res = await fetch(process.env.NEXT_PUBLIC_ONBOARD_URL!, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}.`);
+      }
+
+      setResponse({
+        message: `Your details have been submitted successfully! Here's a summary: ${
+          data.fullName
+        } from ${data.companyName} (${
+          data.email
+        }) interested in ${data.services.join(", ")}${
+          data.budgetUsd
+            ? ` with a budgetUsd of ${data.budgetUsd.toFixed(2)} ${
+                Constants.Currency
+              }`
+            : ""
+        }${
+          data.projectStartDate ? ` starting ${data.projectStartDate}` : ""
+        }. We'll be in touch soon!`,
+        isError: false,
+      });
+
+      resetForm();
+    } catch (err: any) {
+      const message = err.message || "Something went wrong";
+      setResponse({
+        message: `An error occured while sending your details: ${message}`,
+        isError: true,
+      });
+    }
+  };
+  return (
+    <main className="min-h-screen w-full px-4 py-6 flex">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="my-auto w-full max-w-xl bg-slate-50 shadow rounded-small m-auto p-6"
+      >
+        <h2 className="text-slate-950">Let’s kickstart your project</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Fill out this short onboarding form so we can understand your needs
+          and get your project moving. We’ll review your details and get back to
+          you within 1–2 business days.
+        </p>
+        <div className="grid grid-cols-1 gap-5 mt-6">
+          <div className={`input ${errors.fullName ? "error" : ""}`}>
+            <label htmlFor="fullName">Full Name</label>
+            <input
+              id="fullName"
+              autoComplete="name"
+              aria-required="true"
+              aria-invalid={!!errors.fullName}
+              type="text"
+              placeholder="e.g., Ada Lovelace"
+              {...register("fullName")}
+            />
+            {errors.fullName && (
+              <p className="message">{errors.fullName.message}</p>
+            )}
+          </div>
+          <div className={`input ${errors.email ? "error" : ""}`}>
+            <label htmlFor="email">Email address</label>
+            <input
+              id="email"
+              autoComplete="email"
+              aria-required="true"
+              aria-invalid={!!errors.email}
+              type="email"
+              placeholder="e.g., ada@example.com"
+              {...register("email")}
+            />
+            {errors.email && <p className="message">{errors.email.message}</p>}
+          </div>
+          <div className={`input ${errors.companyName ? "error" : ""}`}>
+            <label htmlFor="companyName">Company name</label>
+            <input
+              id="companyName"
+              autoComplete="organization"
+              aria-required="true"
+              aria-invalid={!!errors.companyName}
+              type="text"
+              placeholder="e.g., Analytical Engines Ltd"
+              {...register("companyName")}
+            />
+            {errors.companyName && (
+              <p className="message">{errors.companyName.message}</p>
+            )}
+          </div>
+          <div className={`input ${errors.services ? "error" : ""}`}>
+            <label>Services interested in</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {Constants.ServicesList.map((service) => (
+                <label
+                  key={service}
+                  className="p-1 rounded-full cursor-pointer bg-slate-100 border border-slate-200 flex items-center no-padding"
+                  htmlFor={service}
+                >
+                  <input
+                    id={service}
+                    type="checkbox"
+                    value={service}
+                    {...register("services")}
+                    className="sr-only peer"
+                  />
+                  <span className="size-10 peer-focus-visible:ring-slate-300 ring-3 ring-transparent bg-slate-200 transition-colors duration-600 rounded-full flex items-center justify-center peer-checked:bg-blue-600 peer-checked:border-blue-600">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="size-4 text-slate-100"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </span>
+                  <span className="px-4">{service}</span>
+                </label>
+              ))}
+            </div>
+            {errors.services && (
+              <p className="message">{errors.services.message}</p>
+            )}
+          </div>
+          <div className={`input ${errors.budgetUsd ? "error" : ""}`}>
+            <label htmlFor="budgetUsd">Estimated budgetUsd</label>
+            <div className="relative w-full">
+              <input
+                id="budgetUsd"
+                type="number"
+                autoComplete="off"
+                aria-required="true"
+                aria-invalid={!!errors.budgetUsd}
+                step={100}
+                placeholder="e.g., 50000"
+                {...register("budgetUsd")}
+                className="no-padding py-3 pl-4 pr-16 w-full"
+              />
+              <div className="absolute right-5 top-1/2 transform -translate-y-1/2 text-sm">
+                {Constants.Currency}
+              </div>
+            </div>
+            {errors.budgetUsd ? (
+              <p className="message">{errors.budgetUsd.message}</p>
+            ) : (
+              <p className="message">This is optional</p>
+            )}
+          </div>
+          <div className={`input ${errors.projectStartDate ? "error" : ""}`}>
+            <label htmlFor="projectStartDate">
+              When would you like to start?
+            </label>
+            <input
+              id="projectStartDate"
+              autoComplete="off"
+              aria-required="true"
+              aria-invalid={!!errors.projectStartDate}
+              type="date"
+              placeholder="e.g., 50000"
+              {...register("projectStartDate")}
+            />
+            {errors.projectStartDate && (
+              <p className="message">{errors.projectStartDate.message}</p>
+            )}
+          </div>
+          <div className={`input ${errors.acceptTerms ? "error" : ""}`}>
+            <label
+              htmlFor="acceptTerms"
+              className="flex items-center gap-2 no-padding cursor-pointer"
+            >
+              <input
+                id="acceptTerms"
+                type="checkbox"
+                {...register("acceptTerms")}
+                className="sr-only peer"
+              />
+              <span className="w-5 h-5 border border-gray-400 peer-focus-visible:ring-slate-300 ring-2 ring-transparent transition-colors duration-600 rounded flex items-center justify-center peer-checked:bg-blue-600 peer-checked:border-blue-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-3 h-3 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </span>
+              <p>
+                I accept the{" "}
+                <a
+                  href="#"
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                >
+                  terms and conditions
+                </a>
+              </p>
+            </label>
+            {errors.acceptTerms && (
+              <p className="message">{errors.acceptTerms.message}</p>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            aria-label="Send my details"
+            className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors duration-300 disabled:pointer-events-none disabled:opacity-50"
+          >
+            {isSubmitting ? "Sending..." : "Send my details"}
+          </button>
+        </div>
+      </form>
+      {response && <Alert {...response} close={() => setResponse(null)} />}
+    </main>
+  );
+};
+
+export default HomePage;
